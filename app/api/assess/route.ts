@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as sdk from "microsoft-cognitiveservices-speech-sdk";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 interface PhonemeResult {
   phoneme: string;
@@ -26,6 +27,19 @@ const ANALYSIS_TIMEOUT = 15000; // 15 seconds
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit by IP: 20 requests per minute
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+    const limit = checkRateLimit(ip);
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: "rate_limited", message: "Too many requests. Wait a moment and try again." },
+        {
+          status: 429,
+          headers: { "Retry-After": String(Math.ceil((limit.retryAfterMs ?? 60000) / 1000)) },
+        }
+      );
+    }
+
     const key = process.env.AZURE_SPEECH_KEY;
     const region = process.env.AZURE_SPEECH_REGION;
 

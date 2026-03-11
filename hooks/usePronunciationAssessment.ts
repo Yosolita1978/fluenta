@@ -24,6 +24,7 @@ export interface AssessmentResult {
 export type AssessmentError =
   | "no_speech"
   | "timeout"
+  | "rate_limited"
   | "network"
   | "unknown";
 
@@ -41,6 +42,7 @@ interface UseAssessmentReturn {
 const ERROR_MESSAGES: Record<AssessmentError, string> = {
   no_speech: "No speech detected. Try speaking louder.",
   timeout: "Analysis took too long. Try again.",
+  rate_limited: "Too many requests. Wait a moment and try again.",
   network: "Connection failed. Check your internet.",
   unknown: "Something went wrong. Try again.",
 };
@@ -78,6 +80,9 @@ export function usePronunciationAssessment(): UseAssessmentReturn {
         } else if (serverError === "timeout") {
           setError("timeout");
           setErrorMessage(ERROR_MESSAGES.timeout);
+        } else if (serverError === "rate_limited") {
+          setError("rate_limited");
+          setErrorMessage(ERROR_MESSAGES.rate_limited);
         } else {
           setError("unknown");
           setErrorMessage(body.message || ERROR_MESSAGES.unknown);
