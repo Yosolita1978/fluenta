@@ -1,0 +1,18 @@
+{
+  "name": "Fluenta — Pronunciation Practice",
+  "short_name": "Fluenta",
+  "description": "Practice and improve your English pronunciation",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1e2148",
+  "theme_color": "#1e2148",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
