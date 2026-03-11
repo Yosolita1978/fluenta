@@ -1,36 +1,110 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Fluenta
+
+A pronunciation practice app that gives you real-time feedback on your English speech using Azure Cognitive Services.
+
+Record yourself speaking, and get detailed scores on accuracy, fluency, completeness, and prosody — plus a word-by-word breakdown showing exactly which sounds need work.
+
+## Features
+
+- **One-tap recording** with auto-stop at 60 seconds
+- **Pronunciation assessment** powered by Azure Speech SDK (unscripted mode, en-US)
+- **Overall scores** for accuracy, fluency, completeness, and prosody
+- **Word-level breakdown** — words scored below 70 are highlighted with phoneme-level detail
+- **Installable PWA** — add to your home screen for a native app experience
+- **Mobile-first** design with dark theme and smooth animations
+- **Secure** — Azure API keys stay server-side, never exposed to the browser
+
+## Tech Stack
+
+- [Next.js 16](https://nextjs.org/) (App Router)
+- TypeScript
+- [Tailwind CSS 4](https://tailwindcss.com/)
+- [Azure Cognitive Services Speech SDK](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/pronunciation-assessment)
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 20+
+- An [Azure Speech Services](https://azure.microsoft.com/en-us/products/ai-services/speech-services) resource (free tier works)
+
+### Setup
+
+1. Clone the repository:
+
+```bash
+git clone <your-repo-url>
+cd fluenta-app
+```
+
+2. Install dependencies:
+
+```bash
+npm install
+```
+
+3. Create a `.env.local` file in the project root:
+
+```
+AZURE_SPEECH_KEY=your-azure-speech-key
+AZURE_SPEECH_REGION=your-azure-region
+```
+
+4. Start the dev server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+5. Open [http://localhost:3000](http://localhost:3000) on your browser or phone.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Build for Production
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm start
+```
 
-## Learn More
+## Project Structure
 
-To learn more about Next.js, take a look at the following resources:
+```
+app/
+  page.tsx           # Main UI — record button, status, results
+  layout.tsx         # Root layout, fonts, PWA meta
+  globals.css        # Theme, animations, custom styles
+  icon.png           # Favicon (auto-served by Next.js)
+  apple-icon.png     # iOS home screen icon
+  api/assess/
+    route.ts         # Server-side API — receives audio, calls Azure, returns scores
+hooks/
+  useRecorder.ts     # Microphone recording with format detection and auto-stop
+  usePronunciationAssessment.ts  # Sends audio to /api/assess, parses results
+lib/
+  audioUtils.ts      # Browser-side WebM/OGG → WAV conversion
+public/
+  icon.png           # App icon
+  logo.png           # Full logo (icon + text)
+  manifest.json      # PWA manifest
+  sw.js              # Service worker for caching and offline support
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## How It Works
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. User taps the record button — the browser requests microphone access
+2. Audio is captured via `MediaRecorder` using the best supported format (WebM, OGG, or MP4)
+3. On stop, the audio is converted to 16kHz mono WAV in the browser using `OfflineAudioContext`
+4. The WAV is sent to `/api/assess` — a Next.js API route that calls Azure Speech SDK server-side
+5. Azure returns pronunciation scores and word/phoneme detail
+6. Results are displayed with animated score arcs and color-coded word pills
 
-## Deploy on Vercel
+## Roadmap
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+See [TODO.md](./TODO.md) for planned features:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Prompt Mode** — show a sentence to read for scripted assessment
+- **Audio Playback** — listen back to your recording alongside results
+- **Haptic Feedback** — vibrate on record start/stop on mobile
+
+## License
+
+MIT
