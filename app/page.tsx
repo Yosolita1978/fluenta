@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import Image from "next/image";
 import { useRecorder } from "@/hooks/useRecorder";
 import {
@@ -8,6 +8,8 @@ import {
   AssessmentResult,
   WordResult,
 } from "@/hooks/usePronunciationAssessment";
+import { Level, getRandomSentence } from "@/lib/sentences";
+import { useTts } from "@/hooks/useTts";
 
 /* ─── Helpers ─── */
 
@@ -109,7 +111,15 @@ function ScoreArc({
 
 /* ─── Word Breakdown ─── */
 
-function WordBreakdown({ words }: { words: WordResult[] }) {
+function WordBreakdown({
+  words,
+  onPlayWord,
+  playingWord,
+}: {
+  words: WordResult[];
+  onPlayWord?: (word: string) => void;
+  playingWord?: string | null;
+}) {
   return (
     <div
       className="animate-slide-up flex flex-col gap-4"
@@ -137,13 +147,20 @@ function WordBreakdown({ words }: { words: WordResult[] }) {
               style={{ animationDelay: `${600 + i * 60}ms` }}
             >
               <span
-                className="rounded-xl px-3.5 py-2 text-sm font-medium transition-all"
+                className={`rounded-xl px-3.5 py-2 text-sm font-medium transition-all inline-flex items-center gap-1.5 ${isLow ? "cursor-pointer" : ""}`}
                 style={{
                   background: isLow ? "var(--accent-red-dim)" : "var(--accent-mint-dim)",
                   color: isLow ? "var(--accent-red)" : "var(--accent-mint)",
+                  animation: isLow && playingWord === w.word ? "fade-pulse 1.4s ease-in-out infinite" : "none",
                 }}
+                onClick={isLow ? () => onPlayWord?.(w.word) : undefined}
               >
                 {w.word}
+                {isLow && (
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style={{ opacity: 0.7 }}>
+                    <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 8.5v7a4.47 4.47 0 0 0 2.5-3.5z" />
+                  </svg>
+                )}
               </span>
               <span
                 className="mt-1.5 text-[10px] font-medium"
@@ -180,7 +197,21 @@ function WordBreakdown({ words }: { words: WordResult[] }) {
 
 /* ─── Results Panel ─── */
 
-function ResultsPanel({ result }: { result: AssessmentResult }) {
+function ResultsPanel({
+  result,
+  onPlayWord,
+  playingWord,
+  referenceText,
+  onPlaySentence,
+  ttsPlaying,
+}: {
+  result: AssessmentResult;
+  onPlayWord?: (word: string) => void;
+  playingWord?: string | null;
+  referenceText?: string;
+  onPlaySentence?: () => void;
+  ttsPlaying?: boolean;
+}) {
   const avg =
     (result.accuracyScore +
       result.fluencyScore +
@@ -224,7 +255,30 @@ function ResultsPanel({ result }: { result: AssessmentResult }) {
       </div>
 
       {/* Word breakdown */}
-      {result.words.length > 0 && <WordBreakdown words={result.words} />}
+      {result.words.length > 0 && (
+        <WordBreakdown words={result.words} onPlayWord={onPlayWord} playingWord={playingWord} />
+      )}
+
+      {/* Hear full sentence */}
+      {referenceText && onPlaySentence && (
+        <button
+          onClick={onPlaySentence}
+          className="animate-slide-up flex items-center gap-2 rounded-full px-5 py-2.5 transition-all self-center"
+          style={{
+            animationDelay: "700ms",
+            background: ttsPlaying ? "var(--accent-teal)" : "var(--bg-card)",
+            border: `1px solid ${ttsPlaying ? "var(--accent-teal)" : "rgba(107, 197, 176, 0.25)"}`,
+            color: ttsPlaying ? "var(--bg-deep)" : "var(--accent-teal)",
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 8.5v7a4.47 4.47 0 0 0 2.5-3.5zM14 3.23v2.06a7 7 0 0 1 0 13.42v2.06A9 9 0 0 0 14 3.23z" />
+          </svg>
+          <span className="text-sm font-medium">
+            {ttsPlaying ? "Playing..." : "Hear correct pronunciation"}
+          </span>
+        </button>
+      )}
     </div>
   );
 }
@@ -479,19 +533,143 @@ function StatusText({
   );
 }
 
+/* ─── Playback Button ─── */
+
+function PlaybackButton({
+  audioBlob,
+}: {
+  audioBlob: Blob;
+}) {
+  const [playing, setPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const urlRef = useRef<string | null>(null);
+
+  const cleanup = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    if (urlRef.current) {
+      URL.revokeObjectURL(urlRef.current);
+      urlRef.current = null;
+    }
+    setPlaying(false);
+  }, []);
+
+  useEffect(() => {
+    return cleanup;
+  }, [cleanup]);
+
+  const toggle = () => {
+    if (playing && audioRef.current) {
+      audioRef.current.pause();
+      setPlaying(false);
+      return;
+    }
+
+    // Create fresh audio each time to avoid stale state
+    cleanup();
+    const url = URL.createObjectURL(audioBlob);
+    urlRef.current = url;
+    const audio = new Audio(url);
+    audioRef.current = audio;
+
+    audio.onended = () => {
+      setPlaying(false);
+    };
+
+    audio.play();
+    setPlaying(true);
+  };
+
+  return (
+    <button
+      onClick={toggle}
+      className="animate-slide-up flex items-center gap-2 rounded-full px-5 py-2.5 transition-all"
+      style={{
+        background: playing ? "var(--accent-teal)" : "var(--bg-card)",
+        border: `1px solid ${playing ? "var(--accent-teal)" : "rgba(107, 197, 176, 0.25)"}`,
+        color: playing ? "var(--bg-deep)" : "var(--accent-teal)",
+      }}
+    >
+      {playing ? (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <rect x="6" y="5" width="4" height="14" rx="1" />
+          <rect x="14" y="5" width="4" height="14" rx="1" />
+        </svg>
+      ) : (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M8 5v14l11-7z" />
+        </svg>
+      )}
+      <span className="text-sm font-medium">
+        {playing ? "Pause" : "Play back"}
+      </span>
+    </button>
+  );
+}
+
 /* ─── Main Page ─── */
 
 export default function Home() {
   const recorder = useRecorder();
   const assessment = usePronunciationAssessment();
+  const tts = useTts();
   const resultsRef = useRef<HTMLDivElement>(null);
+  const [promptMode, setPromptMode] = useState(false);
+  const [level, setLevel] = useState<Level>("beginner");
+  const [currentSentence, setCurrentSentence] = useState(() => getRandomSentence("beginner"));
+  const [showTip, setShowTip] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const tipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const pickNewSentence = useCallback(() => {
+    setCurrentSentence((prev) => getRandomSentence(level, prev));
+
+  }, [level]);
+
+  const generateAiSentence = useCallback(async () => {
+    setGenerating(true);
+    try {
+      const res = await fetch(`/api/generate-prompt?level=${level}`);
+      const data = await res.json();
+      if (data.sentence) {
+        setCurrentSentence(data.sentence);
+
+      } else {
+        pickNewSentence();
+      }
+    } catch {
+      pickNewSentence();
+    } finally {
+      setGenerating(false);
+    }
+  }, [level, pickNewSentence]);
+
+  // Pick a new sentence when level changes — but only if current is curated
+  const handleLevelChange = useCallback((newLevel: Level) => {
+    setLevel(newLevel);
+    setCurrentSentence(getRandomSentence(newLevel));
+
+  }, []);
 
   useEffect(() => {
     if (recorder.status === "done" && recorder.audioBlob) {
-      assessment.analyze(recorder.audioBlob);
+      assessment.analyze(recorder.audioBlob, promptMode ? currentSentence : undefined);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recorder.status, recorder.audioBlob]);
+
+  // "Speak longer" tip when recording < 5 seconds
+  useEffect(() => {
+    if (recorder.status === "done" && recorder.elapsed < 5) {
+      setShowTip(true);
+      tipTimeoutRef.current = setTimeout(() => setShowTip(false), 5000);
+    }
+    return () => {
+      if (tipTimeoutRef.current) clearTimeout(tipTimeoutRef.current);
+    };
+  }, [recorder.status, recorder.elapsed]);
 
   // Scroll to results when done
   useEffect(() => {
@@ -502,14 +680,23 @@ export default function Home() {
     }
   }, [assessment.status]);
 
+  const vibrate = (pattern: number | number[]) => {
+    if (typeof navigator !== "undefined" && navigator.vibrate) {
+      navigator.vibrate(pattern);
+    }
+  };
+
   const handleTap = async () => {
     if (recorder.status === "idle") {
       try {
+        vibrate(50);
+        setShowTip(false);
         await recorder.start();
       } catch {
         // error is set inside useRecorder for mic_denied
       }
     } else if (recorder.status === "recording") {
+      vibrate([50, 50, 50]);
       recorder.stop();
     } else {
       recorder.reset();
@@ -536,7 +723,7 @@ export default function Home() {
   }
 
   return (
-    <div className="flex min-h-[100dvh] flex-col items-center">
+    <div className="flex min-h-dvh flex-col items-center">
       {/* Header */}
       <header className="w-full px-6 pt-10 pb-4 flex justify-center">
         <Image
@@ -548,6 +735,153 @@ export default function Home() {
           className="h-20 w-auto"
         />
       </header>
+
+      {/* Speak longer tip */}
+      {showTip && (
+        <div
+          className="animate-toast w-full max-w-md mx-auto px-6 mt-2"
+        >
+          <div
+            className="flex items-center justify-between gap-3 rounded-xl px-4 py-3"
+            style={{
+              background: "var(--accent-amber-dim)",
+              border: "1px solid rgba(251, 191, 36, 0.2)",
+            }}
+          >
+            <span className="text-xs font-medium" style={{ color: "var(--accent-amber)" }}>
+              Tip: Speak for at least 5 seconds for better results
+            </span>
+            <button
+              onClick={() => setShowTip(false)}
+              className="shrink-0"
+              style={{ color: "var(--accent-amber)" }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Prompt mode toggle */}
+      <div className="w-full max-w-md px-6 flex items-center justify-between">
+        <span
+          className="text-xs font-medium tracking-wide"
+          style={{ color: promptMode ? "var(--accent-teal)" : "var(--text-muted)" }}
+        >
+          Prompt mode
+        </span>
+        <button
+          onClick={() => setPromptMode((p) => !p)}
+          className="relative rounded-full transition-colors duration-200"
+          style={{
+            width: 44,
+            height: 24,
+            background: promptMode ? "var(--accent-teal)" : "var(--bg-elevated)",
+          }}
+        >
+          <div
+            className="absolute top-1 rounded-full transition-transform duration-200"
+            style={{
+              width: 16,
+              height: 16,
+              background: "var(--text-primary)",
+              transform: promptMode ? "translateX(24px)" : "translateX(4px)",
+            }}
+          />
+        </button>
+      </div>
+
+      {/* Level selector + Prompt sentence card */}
+      {promptMode && (
+        <div className="w-full max-w-md mx-auto mt-4 px-6 flex flex-col gap-3">
+          {/* Level selector */}
+          <div className="flex gap-2 justify-center">
+            {(["beginner", "intermediate", "expert"] as const).map((lvl) => (
+              <button
+                key={lvl}
+                onClick={() => handleLevelChange(lvl)}
+                className="rounded-full px-4 py-1.5 text-xs font-medium transition-all capitalize"
+                style={{
+                  background: level === lvl ? "var(--accent-teal)" : "var(--bg-card)",
+                  color: level === lvl ? "var(--bg-deep)" : "var(--text-muted)",
+                  border: `1px solid ${level === lvl ? "var(--accent-teal)" : "rgba(107, 197, 176, 0.15)"}`,
+                }}
+              >
+                {lvl}
+              </button>
+            ))}
+          </div>
+
+          {/* Sentence card */}
+          <div
+            className="rounded-2xl px-5 py-4 text-center"
+            style={{
+              background: "var(--bg-card)",
+              border: "1px solid rgba(107, 197, 176, 0.15)",
+            }}
+          >
+            <p
+              className="text-[10px] uppercase tracking-widest mb-2 font-medium"
+              style={{ color: "var(--text-muted)" }}
+            >
+              Read aloud
+            </p>
+            <p
+              className={`font-medium leading-relaxed wrap-break-word ${
+                level === "expert" ? "text-base" : "text-lg"
+              }`}
+              style={{ color: "var(--text-primary)" }}
+            >
+              {currentSentence}
+            </p>
+            <div className="mt-3 flex items-center justify-center gap-4">
+              <button
+                onClick={pickNewSentence}
+                className="text-xs font-medium transition-colors"
+                style={{ color: "var(--accent-teal)" }}
+              >
+                Skip sentence
+              </button>
+              <button
+                onClick={generateAiSentence}
+                disabled={generating}
+                className="text-xs font-medium transition-colors inline-flex items-center gap-1"
+                style={{ color: "var(--accent-teal)", opacity: generating ? 0.6 : 1 }}
+              >
+                {generating ? (
+                  <>
+                    <span className="flex gap-0.5">
+                      {[0, 1, 2].map((i) => (
+                        <span
+                          key={i}
+                          className="rounded-full"
+                          style={{
+                            width: 3,
+                            height: 3,
+                            background: "var(--accent-teal)",
+                            display: "inline-block",
+                            animation: `fade-pulse 1.4s ease-in-out ${i * 0.2}s infinite`,
+                          }}
+                        />
+                      ))}
+                    </span>
+                    Generating
+                  </>
+                ) : (
+                  <>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2L9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2z" />
+                    </svg>
+                    Generate with AI
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Button area */}
       <div className="flex flex-1 flex-col items-center justify-center px-6">
@@ -594,7 +928,19 @@ export default function Home() {
               background: "linear-gradient(90deg, transparent, var(--bg-elevated), transparent)",
             }}
           />
-          <ResultsPanel result={assessment.result} />
+          {recorder.audioBlob && (
+            <div className="mb-6">
+              <PlaybackButton audioBlob={recorder.audioBlob} />
+            </div>
+          )}
+          <ResultsPanel
+            result={assessment.result}
+            onPlayWord={(word) => tts.play(word)}
+            playingWord={tts.currentText}
+            referenceText={promptMode ? currentSentence : undefined}
+            onPlaySentence={promptMode ? () => tts.play(currentSentence) : undefined}
+            ttsPlaying={tts.playing}
+          />
         </div>
       )}
     </div>

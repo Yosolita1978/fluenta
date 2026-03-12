@@ -35,7 +35,7 @@ interface UseAssessmentReturn {
   result: AssessmentResult | null;
   error: AssessmentError | null;
   errorMessage: string | null;
-  analyze: (audioBlob: Blob) => Promise<void>;
+  analyze: (audioBlob: Blob, referenceText?: string) => Promise<void>;
   reset: () => void;
 }
 
@@ -53,7 +53,7 @@ export function usePronunciationAssessment(): UseAssessmentReturn {
   const [error, setError] = useState<AssessmentError | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const analyze = useCallback(async (audioBlob: Blob) => {
+  const analyze = useCallback(async (audioBlob: Blob, referenceText?: string) => {
     setStatus("analyzing");
     setResult(null);
     setError(null);
@@ -64,9 +64,16 @@ export function usePronunciationAssessment(): UseAssessmentReturn {
       const wavBuffer = await blobToWavBuffer(audioBlob);
       const wavBlob = new Blob([wavBuffer], { type: "audio/wav" });
 
+      const headers: Record<string, string> = {
+        "Content-Type": "audio/wav",
+      };
+      if (referenceText) {
+        headers["X-Reference-Text"] = referenceText;
+      }
+
       const response = await fetch("/api/assess", {
         method: "POST",
-        headers: { "Content-Type": "audio/wav" },
+        headers,
         body: wavBlob,
       });
 

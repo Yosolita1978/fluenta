@@ -66,9 +66,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Optional reference text for scripted assessment mode
+    const referenceText = request.headers.get("x-reference-text")?.trim() || "";
+
     // Audio arrives as WAV (converted client-side)
     const result = await Promise.race([
-      runAssessment(key, region, audioBytes),
+      runAssessment(key, region, audioBytes, referenceText),
       timeout(ANALYSIS_TIMEOUT),
     ]);
 
@@ -102,7 +105,8 @@ function timeout(ms: number): Promise<null> {
 async function runAssessment(
   key: string,
   region: string,
-  wavBuffer: ArrayBuffer
+  wavBuffer: ArrayBuffer,
+  referenceText: string
 ): Promise<AssessmentResult> {
   const speechConfig = sdk.SpeechConfig.fromSubscription(key, region);
   speechConfig.speechRecognitionLanguage = "en-US";
@@ -116,10 +120,10 @@ async function runAssessment(
   const audioConfig = sdk.AudioConfig.fromStreamInput(pushStream);
 
   const pronunciationConfig = new sdk.PronunciationAssessmentConfig(
-    "",
+    referenceText,
     sdk.PronunciationAssessmentGradingSystem.HundredMark,
     sdk.PronunciationAssessmentGranularity.Phoneme,
-    false
+    referenceText.length > 0
   );
   pronunciationConfig.enableProsodyAssessment = true;
 
