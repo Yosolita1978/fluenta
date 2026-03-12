@@ -34,6 +34,12 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap"
           rel="stylesheet"
         />
+        <script async src="https://plausible.io/js/pa-GwRDMYn5Ubi21SuEl2rAq.js" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};plausible.init()`,
+          }}
+        />
       </head>
       <body className="antialiased">
         {children}
