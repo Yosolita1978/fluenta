@@ -689,14 +689,14 @@ export default function Home() {
   const handleTap = async () => {
     if (recorder.status === "idle") {
       try {
-        vibrate(50);
         setShowTip(false);
         await recorder.start();
+        vibrate(100);
       } catch {
         // error is set inside useRecorder for mic_denied
       }
     } else if (recorder.status === "recording") {
-      vibrate([50, 50, 50]);
+      vibrate([80, 60, 80]);
       recorder.stop();
     } else {
       recorder.reset();
