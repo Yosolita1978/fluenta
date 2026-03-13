@@ -1,4 +1,4 @@
-const CACHE_NAME = "fluenta-v1";
+const CACHE_NAME = "fluenta-v2";
 const PRECACHE_URLS = ["/", "/icon.png", "/logo.png"];
 
 self.addEventListener("install", (event) => {
@@ -20,7 +20,7 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  // Network-first for API calls, cache-first for static assets
+  // Network-first for API calls
   if (event.request.url.includes("/api/")) {
     event.respondWith(
       fetch(event.request).catch(() =>
@@ -33,6 +33,21 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // Network-first for page/document requests (HTML)
+  if (event.request.mode === "navigate") {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          return response;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // Cache-first for static assets (images, CSS, JS bundles)
   event.respondWith(
     caches.match(event.request).then((cached) => {
       const fetched = fetch(event.request).then((response) => {
