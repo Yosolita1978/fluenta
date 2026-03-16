@@ -1,4 +1,4 @@
-const CACHE_NAME = "fluenta-v2";
+const CACHE_NAME = "fluenta-v3";
 const PRECACHE_URLS = ["/", "/icon.png", "/logo.png"];
 
 self.addEventListener("install", (event) => {

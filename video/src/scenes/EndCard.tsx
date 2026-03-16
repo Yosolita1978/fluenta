@@ -100,7 +100,7 @@ export const EndCard: React.FC<{ fontFamily: string }> = ({ fontFamily }) => {
           letterSpacing: "0.02em",
         }}
       >
-        fluenta.app
+        fluentaspeech.com
       </p>
     </div>
   );

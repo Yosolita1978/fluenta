@@ -4,12 +4,27 @@ import { checkRateLimit } from "@/lib/rateLimit";
 const VALID_LEVELS = ["beginner", "intermediate", "expert"] as const;
 const GENERATION_TIMEOUT = 10000;
 
+const TOPICS = [
+  "travel", "cooking", "science", "music", "sports", "nature", "history",
+  "technology", "health", "art", "animals", "space", "weather", "movies",
+  "family", "work", "hobbies", "fashion", "architecture", "ocean",
+  "education", "festivals", "gardening", "photography", "volunteering",
+];
+
+function randomTopic(): string {
+  return TOPICS[Math.floor(Math.random() * TOPICS.length)];
+}
+
 const SYSTEM_PROMPT = `You generate English pronunciation practice sentences for language learners. Return ONLY the sentence — no quotes, no explanation, no punctuation other than what belongs in the sentence.
+
+Important:
+- Every sentence must be unique and creative. Vary structure, vocabulary, and tone.
+- Do NOT always start with "The" or "A". Mix sentence starters: questions, commands, names, adverbs, clauses, etc.
 
 Rules per level:
 - beginner: 5–10 words, everyday vocabulary, simple grammar. Example: "Can I have a glass of water?"
-- intermediate: 10–20 words, varied vocabulary, compound or complex sentences. Example: "The conference was postponed because several speakers canceled at the last minute."
-- expert: 15–30 words, challenging phonetics, idioms, technical or academic language. Example: "The entrepreneur thoroughly analyzed the pharmaceutical company's quarterly earnings before restructuring the portfolio."`;
+- intermediate: 10–20 words, varied vocabulary, compound or complex sentences. Example: "Could you repeat that more slowly? I didn't quite catch what you said."
+- expert: 15–30 words, challenging phonetics, idioms, technical or academic language. Example: "Despite the overwhelming bureaucratic obstacles, the archaeological expedition persevered through particularly treacherous circumstances."`;
 
 export async function GET(request: NextRequest) {
   try {
@@ -55,7 +70,7 @@ export async function GET(request: NextRequest) {
         model,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: `Generate one ${level} level pronunciation practice sentence.` },
+          { role: "user", content: `Generate one ${level} level pronunciation practice sentence about ${randomTopic()}. Be creative and surprising.` },
         ],
         max_tokens: 150,
         temperature: 0.9,

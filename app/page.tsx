@@ -943,6 +943,34 @@ export default function Home() {
           />
         </div>
       )}
+
+      {/* Footer */}
+      <footer
+        className="w-full py-6 mt-auto flex flex-col items-center gap-1"
+        style={{ borderTop: "1px solid rgba(107, 197, 176, 0.1)" }}
+      >
+        <div className="flex items-center gap-3 text-xs" style={{ color: "var(--text-muted)" }}>
+          <a
+            href="https://www.yosola.co/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="transition-colors hover:underline"
+            style={{ color: "var(--accent-teal)" }}
+          >
+            yosola.co
+          </a>
+          <span>·</span>
+          <a
+            href="https://www.comadrelab.dev/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="transition-colors hover:underline"
+            style={{ color: "var(--accent-teal)" }}
+          >
+            comadrelab.dev
+          </a>
+        </div>
+      </footer>
     </div>
   );
 }
