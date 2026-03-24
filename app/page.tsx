@@ -937,8 +937,8 @@ export default function Home() {
             result={assessment.result}
             onPlayWord={(word) => tts.play(word)}
             playingWord={tts.currentText}
-            referenceText={promptMode ? currentSentence : undefined}
-            onPlaySentence={promptMode ? () => tts.play(currentSentence) : undefined}
+            referenceText={promptMode ? currentSentence : assessment.result.words.map((w) => w.word).join(" ")}
+            onPlaySentence={() => tts.play(promptMode ? currentSentence : assessment.result!.words.map((w) => w.word).join(" "))}
             ttsPlaying={tts.playing}
           />
         </div>
