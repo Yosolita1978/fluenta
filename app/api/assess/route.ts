@@ -23,7 +23,7 @@ interface AssessmentResult {
 }
 
 const MAX_AUDIO_SIZE = 10 * 1024 * 1024; // 10 MB
-const ANALYSIS_TIMEOUT = 15000; // 15 seconds
+const ANALYSIS_TIMEOUT = 60000; // 60 seconds
 
 export async function POST(request: NextRequest) {
   try {

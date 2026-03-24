@@ -103,9 +103,9 @@ export function useRecorder(): UseRecorderReturn {
 
     timerRef.current = setInterval(() => {
       setElapsed((prev) => {
-        if (prev >= 59) {
+        if (prev >= 29) {
           stop();
-          return 60;
+          return 30;
         }
         return prev + 1;
       });
