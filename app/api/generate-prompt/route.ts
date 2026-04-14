@@ -18,6 +18,7 @@ function randomTopic(): string {
 const SYSTEM_PROMPT = `You generate English pronunciation practice sentences for language learners. Return ONLY the sentence — no quotes, no explanation, no punctuation other than what belongs in the sentence.
 
 Important:
+- ALWAYS generate sentences in English. Never use any other language, regardless of the user's locale or browser settings.
 - Every sentence must be unique and creative. Vary structure, vocabulary, and tone.
 - Do NOT always start with "The" or "A". Mix sentence starters: questions, commands, names, adverbs, clauses, etc.
 
